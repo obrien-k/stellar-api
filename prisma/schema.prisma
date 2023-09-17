@@ -69,7 +69,7 @@ model User {
   banDate DateTime?
   banReason String?
   warned DateTime?
-  warnedTimes Int default(0)
+  warnedTimes Int @default(0)
   communityPass String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
