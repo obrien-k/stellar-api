@@ -4,33 +4,25 @@ import gravatar from 'gravatar';
 import bcrypt from 'bcryptjs';
 import { check, validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
-import { asyncHandler } from '../modules/asyncHandler';
-
+import { asyncHandler } from '../../modules/asyncHandler';
 import * as dotenv from 'dotenv';
-dotenv.config({ path: __dirname + '../../.env' });
+
+dotenv.config({ path: __dirname + '../../../.env' });
 
 const prisma = new PrismaClient();
 const router = express.Router();
 
-router.get(
-  '/:id',
-  asyncHandler(async (req: Request, res: Response) => {
-    const userId = parseInt(req.params.id, 10);
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        profile: true,
-        userRank: true
-      }
-    });
+interface UserCreationRequest {
+  username: string;
+  email: string;
+  password: string;
+}
 
-    if (!user) {
-      return res.status(404).json({ msg: 'User not found' });
-    }
-
-    res.json(user);
-  })
-);
+interface UserPayload {
+  user: {
+    id: number;
+  };
+}
 
 router.post(
   '/',
@@ -48,7 +40,7 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { username, email, password } = req.body;
+    const { username, email, password }: UserCreationRequest = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
 
@@ -83,7 +75,7 @@ router.post(
       }
     });
 
-    const payload = {
+    const payload: UserPayload = {
       user: {
         id: user.id
       }
@@ -91,7 +83,7 @@ router.post(
 
     jwt.sign(
       payload,
-      process.env.STELLAR_AUTH_JWT_SECRET,
+      process.env.STELLAR_AUTH_JWT_SECRET as string,
       { expiresIn: 3600 },
       (err, token) => {
         if (err) throw err;
