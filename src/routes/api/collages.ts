@@ -45,16 +45,6 @@ const entryParamsSchema = z.object({
   releaseId: z.coerce.number().int().positive()
 });
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const isStaffOrModerator = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<boolean> => {
-  const perms = await loadPermissions(req, res);
-  return !!(perms['collages_moderate'] || perms['staff'] || perms['admin']);
-};
-
 const collageInclude = {
   user: { select: { id: true, username: true, avatar: true } },
   _count: { select: { entries: true, subscriptions: true, bookmarks: true } }
@@ -177,16 +167,20 @@ router.get(
 
     if (!collage) return res.status(404).json({ msg: 'Collage not found' });
 
-    if (collage.isDeleted && !(await isStaffOrModerator(authReq, res))) {
+    const perms = await loadPermissions(authReq, res);
+    const staff = !!(
+      perms['collages_moderate'] ||
+      perms['staff'] ||
+      perms['admin']
+    );
+
+    if (collage.isDeleted && !staff) {
       return res.status(404).json({ msg: 'Collage not found' });
     }
 
     // For personal collages, only owner or staff can view
     if (isPersonal(collage.categoryId)) {
-      if (
-        collage.userId !== authReq.user.id &&
-        !(await isStaffOrModerator(authReq, res))
-      ) {
+      if (collage.userId !== authReq.user.id && !staff) {
         return res.status(403).json({ msg: 'Permission denied' });
       }
     }
@@ -289,7 +283,12 @@ router.put(
     const { id } = parsedParams<{ id: number }>(res);
     const updates = parsedBody<UpdateCollageInput>(res);
     const userId = req.user.id;
-    const staff = await isStaffOrModerator(req, res);
+    const perms = await loadPermissions(req, res);
+    const staff = !!(
+      perms['collages_moderate'] ||
+      perms['staff'] ||
+      perms['admin']
+    );
 
     const collage = await prisma.collage.findUnique({ where: { id } });
     if (!collage || collage.isDeleted)
@@ -374,7 +373,12 @@ router.delete(
   authHandler(async (req, res) => {
     const { id } = parsedParams<{ id: number }>(res);
     const userId = req.user.id;
-    const staff = await isStaffOrModerator(req, res);
+    const perms = await loadPermissions(req, res);
+    const staff = !!(
+      perms['collages_moderate'] ||
+      perms['staff'] ||
+      perms['admin']
+    );
 
     const collage = await prisma.collage.findUnique({ where: { id } });
     if (!collage || collage.isDeleted)
@@ -442,7 +446,12 @@ router.post(
     const { id } = parsedParams<{ id: number }>(res);
     const { releaseId } = parsedBody<AddEntryInput>(res);
     const userId = req.user.id;
-    const staff = await isStaffOrModerator(req, res);
+    const perms = await loadPermissions(req, res);
+    const staff = !!(
+      perms['collages_moderate'] ||
+      perms['staff'] ||
+      perms['admin']
+    );
 
     const collage = await prisma.collage.findUnique({ where: { id } });
     if (!collage || collage.isDeleted)
@@ -553,7 +562,12 @@ router.delete(
       res
     );
     const userId = req.user.id;
-    const staff = await isStaffOrModerator(req, res);
+    const perms = await loadPermissions(req, res);
+    const staff = !!(
+      perms['collages_moderate'] ||
+      perms['staff'] ||
+      perms['admin']
+    );
 
     const collage = await prisma.collage.findUnique({ where: { id } });
     if (!collage || collage.isDeleted)
@@ -597,7 +611,12 @@ router.put(
     const { id } = parsedParams<{ id: number }>(res);
     const { entries } = parsedBody<ReorderEntriesInput>(res);
     const userId = req.user.id;
-    const staff = await isStaffOrModerator(req, res);
+    const perms = await loadPermissions(req, res);
+    const staff = !!(
+      perms['collages_moderate'] ||
+      perms['staff'] ||
+      perms['admin']
+    );
 
     const collage = await prisma.collage.findUnique({ where: { id } });
     if (!collage || collage.isDeleted)
