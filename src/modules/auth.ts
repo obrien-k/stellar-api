@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma';
 import { AppError } from '../lib/errors';
 import { computeRatio } from './ratio';
 import { computeUserRankAccess } from '../lib/userRankAccess';
+import { getDefaultStylesheetName } from './stylesheet';
 
 export const isPasswordBanned = async (password: string): Promise<boolean> => {
   const found = await prisma.badPassword.findFirst({ where: { password } });
@@ -171,7 +172,10 @@ export const registerUser = async ({
   // 3. Atomic: create user + consume invite in one transaction so a crash
   //    between the two can never leave the invite permanently open.
   const user = await prisma.$transaction(async (tx) => {
-    const settings = await tx.userSettings.create({ data: {} });
+    const defaultTheme = await getDefaultStylesheetName(tx);
+    const settings = await tx.userSettings.create({
+      data: { siteAppearance: defaultTheme }
+    });
     const profile = await tx.profile.create({ data: {} });
     const newUser = await tx.user.create({
       data: {
