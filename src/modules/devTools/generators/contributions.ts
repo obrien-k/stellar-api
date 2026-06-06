@@ -11,7 +11,12 @@
  *               contribution with FAIL link health (seed.invalid URL)
  */
 
-import { PrismaClient, FileType, LinkHealthStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  Bitrate,
+  FileType,
+  LinkHealthStatus
+} from '@prisma/client';
 import { RunContext } from '../types';
 import { pick, randInt, randBool, daysAgo, SeedContext } from '../seedRandom';
 import {
@@ -22,28 +27,15 @@ import {
 import { trackCreate } from '../tracking';
 
 // Realistic bitrate options
-const BITRATES = [
-  '128',
-  '192',
-  '256',
-  '320',
-  'V0 (VBR)',
-  'V1 (VBR)',
-  'V2 (VBR)',
+const BITRATES: Bitrate[] = [
+  'Kbps128',
+  'Kbps192',
+  'Kbps256',
+  'Kbps320',
+  'KbpsV0',
+  'KbpsV2',
   'Lossless',
-  '24bit Lossless',
-  'Other'
-];
-
-// Realistic media options
-const MEDIA = [
-  'CD',
-  'WEB',
-  'Vinyl',
-  'Cassette',
-  'Blu-ray',
-  'DVD',
-  'SACD',
+  'Lossless24',
   'Other'
 ];
 
@@ -93,6 +85,19 @@ export async function generateContributions(
       continue;
     }
 
+    // Every contribution belongs to an edition; attach to the release's
+    // default edition, creating one if the release somehow has none.
+    const edition =
+      (await prisma.edition.findFirst({
+        where: { releaseId },
+        orderBy: { id: 'asc' },
+        select: { id: true }
+      })) ??
+      (await prisma.edition.create({
+        data: { releaseId, isUnknownEdition: true },
+        select: { id: true }
+      }));
+
     const contributionCount = randBool(0.7, rng) ? 1 : randInt(2, 3, rng);
 
     for (let c = 0; c < contributionCount; c++) {
@@ -129,7 +134,6 @@ export async function generateContributions(
 
       const fileType = pick(CONTRIBUTION_FILE_TYPES, rng);
       const bitrate = pick(BITRATES, rng);
-      const media = pick(MEDIA, rng);
       // sizeInBytes is BIGINT — no need to cap at INT4 / 2 GB anymore.
       const sizeInBytes = makeFileSizeBytes(rng);
 
@@ -137,6 +141,7 @@ export async function generateContributions(
         data: {
           userId: contributorUserId,
           releaseId,
+          editionId: edition.id,
           contributorId: contributor.id,
           releaseDescription: pick(RELEASE_DESCRIPTIONS, rng).substring(
             0,
@@ -148,7 +153,6 @@ export async function generateContributions(
           linkStatus: 'UNKNOWN' as LinkHealthStatus,
           type: fileType,
           bitrate,
-          media,
           hasLog: randBool(0.4, rng),
           hasCue: randBool(0.3, rng),
           isScene: randBool(0.15, rng),

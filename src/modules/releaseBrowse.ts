@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { sizeBytesToNumber } from '../lib/serialize';
 import { AppError } from '../lib/errors';
 import { isCommunityMember } from '../routes/api/communities/communities';
+import { releaseCreditsSelect, withPrimaryArtist } from './releaseCredits';
 
 const buildPlainTags = (
   releaseTags: Array<{ tag: { id: number; name: string; occurrences: number } }>
@@ -45,7 +46,7 @@ export const listCommunityReleases = async (input: {
       skip,
       take: input.limit,
       include: {
-        artist: { select: { id: true, name: true } },
+        credits: releaseCreditsSelect,
         releaseTags: { include: { tag: true } },
         _count: { select: { contributions: true } },
         contributions: {
@@ -65,7 +66,7 @@ export const listCommunityReleases = async (input: {
 
   return {
     data: releases.map((release) => ({
-      ...release,
+      ...withPrimaryArtist(release),
       contributions: release.contributions.map((c) => ({
         ...c,
         sizeInBytes: sizeBytesToNumber(c.sizeInBytes)
