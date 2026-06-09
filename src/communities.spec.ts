@@ -144,7 +144,11 @@ describe('GET /api/communities/:id/health', () => {
     const res = await request(app).get('/api/communities/1/health');
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ pulse: 0.75, status: 'Ailing', checked: 8 });
+    expect(res.body).toMatchObject({
+      pulse: 0.75,
+      status: 'Ailing',
+      checked: 8
+    });
     expect(getCommunityHealthPulseMock).toHaveBeenCalledWith(1);
   });
 
