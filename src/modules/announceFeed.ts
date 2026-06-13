@@ -84,3 +84,48 @@ export const getAnnounceFeed = async (
     link: releaseUrl(c.releaseId)
   }));
 };
+
+const escapeXml = (s: string): string =>
+  s.replace(
+    /[<>&'"]/g,
+    (ch) =>
+      ({
+        '<': '&lt;',
+        '>': '&gt;',
+        '&': '&amp;',
+        "'": '&apos;',
+        '"': '&quot;'
+      })[ch] as string
+  );
+
+const itemTitle = (item: AnnounceItem): string => {
+  const artists = item.artists.length ? `${item.artists.join(', ')} — ` : '';
+  return `${artists}${item.title} [${item.type}]`;
+};
+
+/** Render the feed as an RSS 2.0 document (#140) — same items as the JSON feed. */
+export const renderAnnounceRss = (items: AnnounceItem[]): string => {
+  const entries = items
+    .map((item) => {
+      const category = item.community
+        ? `\n      <category>${escapeXml(item.community)}</category>`
+        : '';
+      return `    <item>
+      <title>${escapeXml(itemTitle(item))}</title>
+      <link>${escapeXml(item.link)}</link>
+      <guid isPermaLink="false">stellar-contribution-${item.id}</guid>
+      <pubDate>${item.createdAt.toUTCString()}</pubDate>${category}
+    </item>`;
+    })
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Stellar — Release Announce</title>
+    <link>${escapeXml(email.siteUrl)}</link>
+    <description>New contributions on Stellar</description>
+${entries}
+  </channel>
+</rss>`;
+};
