@@ -438,6 +438,7 @@ model User {
   userStatSnapshots        UserStatSnapshot[]
   tagAliasesCreated        TagAlias[]                       @relation("TagAliasCreator")
   ircActivity              IrcActivity[]
+  authoredStylesheet       AuthorStylesheet?
 
   @@index([userRankId])
   @@map("users")
@@ -541,6 +542,22 @@ model Stylesheet {
   createdAt   DateTime @default(now())
 
   @@map("stylesheets")
+}
+
+/// A user-authored stylesheet saved for others to adopt (PRD-03, descent
+/// target #4). One per author (@unique authorId). The keystone the shipped
+/// `scoreStylesheetSelection` (#84) hooks onto: #118 saves it, #119 adopts it,
+/// #120 scores the adoption.
+model AuthorStylesheet {
+  id        Int      @id @default(autoincrement())
+  authorId  Int      @unique
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  name      String
+  source    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("author_stylesheets")
 }
 
 // ─── Forum ────────────────────────────────────────────────────────────────────
