@@ -103,3 +103,57 @@ describe('GET /api/announce/feed — contents', () => {
     expect(res.body.items[0].community).toBeNull();
   });
 });
+
+// ─── RSS/XML (#140) ───────────────────────────────────────────────────────────
+
+describe('GET /api/announce/feed.xml', () => {
+  it('dead-links an invalid / rotated key (401)', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    const res = await request(app).get(`/api/announce/feed.xml?key=${KEY}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('renders the same items as valid RSS 2.0', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 7,
+      disabled: false
+    } as never);
+    prismaMock.contribution.findMany.mockResolvedValue([
+      mockContribution
+    ] as never);
+
+    const res = await request(app).get(`/api/announce/feed.xml?key=${KEY}`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/rss+xml');
+    expect(res.text).toContain('<rss version="2.0">');
+    expect(res.text).toContain(
+      '<title>Artist A, Artist B — Album [flac]</title>'
+    );
+    expect(res.text).toContain(
+      '<link>http://localhost:3000/releases/34</link>'
+    );
+    expect(res.text).toContain('stellar-contribution-12');
+    expect(res.text).toContain('<category>Music</category>');
+    // The key must never leak into the rendered feed body.
+    expect(res.text).not.toContain(KEY);
+  });
+
+  it('xml-escapes item content', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 7,
+      disabled: false
+    } as never);
+    prismaMock.contribution.findMany.mockResolvedValue([
+      {
+        ...mockContribution,
+        release: { title: 'Rock & <Roll>', community: { name: 'Music' } }
+      }
+    ] as never);
+
+    const res = await request(app).get(`/api/announce/feed.xml?key=${KEY}`);
+
+    expect(res.text).toContain('Rock &amp; &lt;Roll&gt;');
+    expect(res.text).not.toContain('Rock & <Roll>');
+  });
+});
