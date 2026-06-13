@@ -346,7 +346,8 @@ model User {
   warned             DateTime?
   warnedTimes        Int                 @default(0)
   lastIp             String?
-  communityPass      String              @default("")
+  ircKey             String?             @unique
+  announceKey        String?             @unique
   disablePm          Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
