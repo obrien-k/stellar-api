@@ -76,6 +76,7 @@ import friendsRouter from './routes/api/friends';
 import tagAliasesRouter from './routes/api/tagAliases';
 import keysRouter from './routes/api/keys';
 import ircRouter from './routes/api/irc';
+import announceRouter from './routes/api/announce';
 import ircSaslRouter from './routes/internal/ircSasl';
 import devToolsRouter from './routes/api/devTools';
 
@@ -186,6 +187,7 @@ export const createApp = () => {
   app.use('/api/tag-aliases', tagAliasesRouter);
   app.use('/api/keys', keysRouter);
   app.use('/api/irc', ircRouter);
+  app.use('/api/announce', announceRouter);
 
   // Dev tools — only mounted outside production
   if (process.env.NODE_ENV !== 'production') {

@@ -70,4 +70,7 @@ Anti-farming is structural: the per-channel/day cap defeats flooding, `consisten
 
 - Greenfield network, or is there an existing IRC network / nick reservations to migrate?
 - `IRCScore` magnitudes + the channel-weight map — TBD with the other CRS magnitudes (HITL, like #121/#122/#126).
-- Announce delivery: does the IRC announce hand the member a one-shot tokenized link, or just notify-and-link-into-the-app (download still session-authed either way)?
+
+## Resolved decisions
+
+- **Announce delivery shape (#136, 2026-06-13): notify-and-link-into-the-app.** The announce item carries a plain link into the app (the release page), not a one-shot tokenized URL — no new token-mint/expiry/replay surface. The download still resolves to a session-authed accounted grant; the link only saves a click.
