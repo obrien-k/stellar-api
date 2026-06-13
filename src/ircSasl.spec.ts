@@ -12,7 +12,7 @@ const IRC_KEY = 'k'.repeat(32);
 
 const validBody = { account: '7', password: IRC_KEY };
 
-const post = (body: unknown, secret: string | null = SECRET) => {
+const post = (body: object, secret: string | null = SECRET) => {
   const req = request(app).post('/internal/irc/sasl');
   if (secret !== null) req.set('Authorization', `Bearer ${secret}`);
   return req.send(body);

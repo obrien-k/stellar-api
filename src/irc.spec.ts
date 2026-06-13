@@ -88,7 +88,7 @@ describe('POST /api/irc/activity — upsert', () => {
 
     expect(res.status).toBe(200);
     const call = prismaMock.ircActivity.upsert.mock.calls[0][0];
-    const day: Date = call.where.userId_channel_day.day;
+    const day = new Date(call.where.userId_channel_day!.day);
     // Midnight UTC of some day.
     expect(day.getUTCHours()).toBe(0);
     expect(day.getUTCMinutes()).toBe(0);
