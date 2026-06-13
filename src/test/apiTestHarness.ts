@@ -161,7 +161,8 @@ jest.mock('../modules/config', () => ({
     smtpPass: '',
     fromAddress: 'noreply@stellar.local',
     siteUrl: 'http://localhost:3000'
-  }
+  },
+  irc: { botToken: 'test-bot-token', saslSecret: 'test-sasl-secret' }
 }));
 
 let currentUserRankLevel = 1000;

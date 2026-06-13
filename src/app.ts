@@ -75,6 +75,7 @@ import rulesRouter from './routes/api/rules';
 import friendsRouter from './routes/api/friends';
 import tagAliasesRouter from './routes/api/tagAliases';
 import keysRouter from './routes/api/keys';
+import ircRouter from './routes/api/irc';
 import devToolsRouter from './routes/api/devTools';
 
 const log = getLogger('app');
@@ -178,6 +179,7 @@ export const createApp = () => {
   app.use('/api/friends', friendsRouter);
   app.use('/api/tag-aliases', tagAliasesRouter);
   app.use('/api/keys', keysRouter);
+  app.use('/api/irc', ircRouter);
 
   // Dev tools — only mounted outside production
   if (process.env.NODE_ENV !== 'production') {
