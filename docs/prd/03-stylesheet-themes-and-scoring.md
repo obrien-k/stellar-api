@@ -96,7 +96,7 @@ The `/private/`, invite-only model is the primary control: a sock-puppeteer must
 
 ## Donor add-ons
 
-**$tylesheets — donor-added slots**: donors unlock additional stylesheet slots (ties to PRD-02 Donations / `donor.ts`).
+**$tylesheets — donor-added slots**: donors unlock additional stylesheet slots (ties to PRD-07 Donations / `donor.ts`).
 
 ## Concept → existing code (the descent map)
 
@@ -112,7 +112,7 @@ The `/private/`, invite-only model is the primary control: a sock-puppeteer must
 
 ## Out of scope (other PRDs)
 
-- LinkHealth lifecycle (cron/flapping/72h/sweep), MusicModel, Donations/IRC scoring → covered by PRD-01 (CRS dimensions), PRD-02, PRD-04. Referenced here only where they feed stylesheet scoring.
+- LinkHealth lifecycle (cron/flapping/72h/sweep), MusicModel, Donations/IRC scoring → covered by PRD-01 (CRS dimensions), PRD-02 (IRC), PRD-04, PRD-07 (Donations). Referenced here only where they feed stylesheet scoring.
 
 ## Red-green descent targets
 
