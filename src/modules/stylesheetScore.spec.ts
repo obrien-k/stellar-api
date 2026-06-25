@@ -1,4 +1,7 @@
-import { scoreStylesheetSelection } from './stylesheetScore';
+import {
+  scoreStylesheetSelection,
+  scoreStylesheetTier
+} from './stylesheetScore';
 
 // PRD-03 stylesheet scoring (docs/prd/03-stylesheet-themes-and-scoring.md).
 // Pure: CRS deltas for {user, site, author} from a selection event.
@@ -67,5 +70,57 @@ describe('scoreStylesheetSelection', () => {
     expect(a.user).toBeCloseTo(0.5, 10); // USER_BASE x5
     expect(a.site).toBe(0);
     expect(a.author).toBeNull();
+  });
+});
+
+// PRD-03 target #2 (#121) tiering escalation curve. Back-loaded marginal
+// (tax-bracket) schedule over distinct adoptions, rates as fractions of the base
+// author delta b = SITE_BASE x5. The cap (6) lives in reputation.ts, NOT here —
+// this scorer returns the raw bracket sum, so band 4 runs past 6 unclamped.
+describe('scoreStylesheetTier', () => {
+  const b = SITE_BASE * 5; // base author delta ≈ 0.708
+
+  it('scores zero adoptions as zero', () => {
+    expect(scoreStylesheetTier(0)).toBe(0);
+  });
+
+  it('pins each band-end cumulative', () => {
+    expect(scoreStylesheetTier(3)).toBeCloseTo(3 * 0.3 * b, 10); // 0.64
+    expect(scoreStylesheetTier(8)).toBeCloseTo((3 * 0.3 + 5 * 0.45) * b, 10); // 2.23
+    expect(scoreStylesheetTier(15)).toBeCloseTo(
+      (3 * 0.3 + 5 * 0.45 + 7 * 0.65) * b,
+      10
+    ); // 5.45
+  });
+
+  it('scores a mid-band count at the prior bands plus the partial band', () => {
+    // 5 adoptions: full band 1 (3) + 2 into band 2.
+    expect(scoreStylesheetTier(5)).toBeCloseTo((3 * 0.3 + 2 * 0.45) * b, 10);
+  });
+
+  it('keeps climbing past the cap unclamped (band 4 is open-ended)', () => {
+    // The dimension cap is reputation.ts's job; the curve itself is monotone up.
+    expect(scoreStylesheetTier(30)).toBeGreaterThan(scoreStylesheetTier(16));
+    expect(scoreStylesheetTier(16)).toBeCloseTo(
+      (3 * 0.3 + 5 * 0.45 + 7 * 0.65 + 1 * 0.85) * b,
+      10
+    ); // 6.05, pre-clamp
+  });
+
+  it('is strictly monotonic and back-loaded (later adoptions worth more)', () => {
+    for (let n = 1; n <= 25; n++) {
+      expect(scoreStylesheetTier(n)).toBeGreaterThan(
+        scoreStylesheetTier(n - 1)
+      );
+    }
+    // Back-loaded: the marginal value of the 16th adoption exceeds the 1st.
+    const marginal = (n: number) =>
+      scoreStylesheetTier(n) - scoreStylesheetTier(n - 1);
+    expect(marginal(16)).toBeGreaterThan(marginal(1));
+  });
+
+  it('floors and clamps non-integer / negative inputs', () => {
+    expect(scoreStylesheetTier(-4)).toBe(0);
+    expect(scoreStylesheetTier(3.9)).toBeCloseTo(scoreStylesheetTier(3), 10);
   });
 });

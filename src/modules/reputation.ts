@@ -18,7 +18,7 @@
 import { prisma } from '../lib/prisma';
 import { computeRatio } from './ratio';
 import { getIrcScore } from './irc';
-import { scoreStylesheetSelection } from './stylesheetScore';
+import { scoreStylesheetTier } from './stylesheetScore';
 import { communityHealthFor } from './communityHealthHistory';
 import { gradeContribution } from './contributionQuality';
 
@@ -227,24 +227,20 @@ const ircScorer: DimensionScorer = {
 };
 
 // ─── StylesheetScore ──────────────────────────────────────────────────────────
-// An author's reward for others adopting their stylesheets (PRD-03). The CRS
-// magnitude is sourced from the shared pure scorer `scoreStylesheetSelection`
-// (the per-adoption author delta of a non-self `author` selection) so the value
-// has a single home; this dimension only multiplies it by the durable count of
-// distinct (adopter, author) adoptions read from the ledger. Computed on read
-// (ADR-0007): nothing stores a denormalized stylesheet score. Anti-farm is the
-// `/private` invite + report model's job (PRD-03), not a bespoke cap — the cap
-// here is the module's standard "no single dimension dominates" guardrail.
+// An author's reward for others adopting their stylesheets (PRD-03). The score
+// is `scoreStylesheetTier` over the durable count of distinct (adopter, author)
+// adoptions read from the ledger — a back-loaded marginal curve, not a flat
+// per-adoption rate. Computed on read (ADR-0007): nothing stores a denormalized
+// stylesheet score. Anti-farm is the `/private` invite + report model's job
+// (PRD-03), not a bespoke cap.
 //
-// PROVISIONAL (tier-0): the per-adoption magnitude and cap are interim. The
-// real reward shape is PRD-03 target #2 (BonusPoints tiering, TBD), which will
-// swap these constants without touching the ledger — the ledger row stays a
-// pure (adopter, author) event marker.
-const STYLESHEET_AUTHOR_PER_ADOPTION =
-  scoreStylesheetSelection({
-    userId: 0,
-    origin: { kind: 'author', authorId: 1 }
-  }).author?.delta ?? 0;
+// The reward shape is PRD-03 target #2 (#121): a back-loaded marginal tiering
+// curve over the distinct-adoption count — `scoreStylesheetTier` owns the
+// magnitude (and the base anchor) so this dimension is just the read-time wiring.
+// The cap is the module's standard "no single dimension dominates" guardrail;
+// the curve is calibrated to reach it (~adoption 16) only by sustained adoption.
+// The ledger row stays a pure (adopter, author) event marker — the curve swaps
+// without touching it.
 const STYLESHEET_CAP = 6;
 const STYLESHEET_WEIGHT = 1.0;
 
@@ -253,7 +249,7 @@ const stylesheetScorer: DimensionScorer = {
   weight: STYLESHEET_WEIGHT,
   cap: STYLESHEET_CAP,
   compute: ({ stylesheetAdoptions = 0 }) =>
-    STYLESHEET_AUTHOR_PER_ADOPTION * Math.max(0, stylesheetAdoptions)
+    scoreStylesheetTier(stylesheetAdoptions)
 };
 
 // ─── InviteScore ──────────────────────────────────────────────────────────
