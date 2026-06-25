@@ -686,6 +686,41 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'put',
+  path: '/users/{id}/rank-lock',
+  tags: ['Users'],
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({ rankLocked: z.boolean() })
+        }
+      }
+    }
+  },
+  responses: {
+    200: {
+      description:
+        'Rank lock toggled (freezes/unfreezes auto class-progression)',
+      content: { 'application/json': { schema: MsgResponse } }
+    },
+    400: {
+      description: 'Validation failed',
+      content: { 'application/json': { schema: ValidationError } }
+    },
+    403: {
+      description: 'Missing users_edit permission',
+      content: { 'application/json': { schema: MsgResponse } }
+    },
+    404: {
+      description: 'User not found',
+      content: { 'application/json': { schema: MsgResponse } }
+    }
+  }
+});
+
+registry.registerPath({
   method: 'get',
   path: '/users/settings',
   tags: ['Users'],

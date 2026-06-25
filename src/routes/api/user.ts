@@ -45,6 +45,7 @@ import {
   warnUserSchema,
   moderationNoteSchema,
   setRankSchema,
+  rankLockSchema,
   donorRankSchema,
   grantDonorSchema,
   ircNickVerifySchema,
@@ -53,6 +54,7 @@ import {
   type WarnUserInput,
   type ModerationNoteInput,
   type SetRankInput,
+  type RankLockInput,
   type DonorRankInput,
   type GrantDonorInput,
   type IrcNickVerifyInput
@@ -823,6 +825,32 @@ router.put(
     const { userRankId, secondaryRankIds } = parsedBody<SetRankInput>(res);
     await setUserRank(id, userRankId, secondaryRankIds, req.user.id);
     res.json({ msg: 'Rank updated' });
+  })
+);
+
+// PUT /api/users/:id/rank-lock — freeze/unfreeze a user from auto
+// class-progression (the engine no-ops on locked users). Deliberately its own
+// route, NOT folded into setUserRank: that path replaces the whole
+// secondary-rank set and would strip a Donor/VIP secondary on every toggle.
+// Mirrors the primary-only update in rankProgressionJob.applyRankChange.
+router.put(
+  '/:id/rank-lock',
+  ...requirePermission('users_edit'),
+  validateParams(userIdParamsSchema),
+  validate(rankLockSchema),
+  authHandler(async (req, res) => {
+    const { id } = parsedParams<{ id: number }>(res);
+    const { rankLocked } = parsedBody<RankLockInput>(res);
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true }
+    });
+    if (!target) return res.status(404).json({ msg: 'User not found' });
+    await prisma.user.update({ where: { id }, data: { rankLocked } });
+    await audit(prisma, req.user.id, 'user.rank_lock_changed', 'User', id, {
+      rankLocked
+    });
+    res.json({ msg: rankLocked ? 'Rank locked' : 'Rank unlocked' });
   })
 );
 
