@@ -52,7 +52,17 @@ Stylesheet activity accrues into the **CRS** along three recipients:
 - **×5** when it's the user's **own** authored stylesheet
 - A user on a modified stylesheet: a **+1** engagement bonus → to Site (or admin), and to the **Author** if a custom InjectedStylesheet.
 
-**Tiering (decided).** The +1 is **both** additive **and** folds into the multipliers as a user **tiers up** — engagement escalates like the [`/verbiagating`](../../../skills) tier ladder: each step of customization/sharing compounds the base rather than paying a flat one-off. The flat multipliers above are **tier 0**; the escalation schedule (the curve as a user climbs tiers) is the **next scoring slice** — curve TBD.
+**Tiering (decided — pinned #121).** The +1 is **both** additive **and** folds into the multipliers as a user **tiers up**: each step of sharing compounds the base rather than paying a flat one-off. The flat multipliers above are **tier 0**. The escalation schedule tiers the **author/popularity axis** — the count of distinct members who have adopted a member's AuthorStylesheets (the deduped `(adopter, author)` ledger from #120) — leaving the user-customization rewards above flat. It is a **discrete tier table** applied **marginally** (tax-bracket: each adoption scores at the rate of the band it falls in, summed — monotonic and cliff-free, so an author's score eases down read-time when a sheet loses adoptions rather than re-rating every past adoption). The curve is **back-loaded within the existing cap (6)**: early adoptions score below the base rate `b` (the non-self author delta ≈ 0.708), the marginal rate climbs each band, and the cap is reached only by sustained popularity (~16 distinct adoptions). Rates are fractions of `b`, so retuning the base rescales the whole curve.
+
+| Tier | Distinct adoptions (band) | Marginal rate / adoption | Cumulative CRS at band end |
+| ---- | ------------------------- | ------------------------ | -------------------------- |
+| 0    | 0                         | —                        | 0.00                       |
+| 1    | 1–3                       | 0.30 × b                 | 0.64                       |
+| 2    | 4–8                       | 0.45 × b                 | 2.23                       |
+| 3    | 9–15                      | 0.65 × b                 | 5.45                       |
+| 4    | 16+                       | 0.85 × b                 | cap 6 reached ~adoption 16 |
+
+Lives in `scoreStylesheetTier` (`stylesheetScore.ts`), wired into the `stylesheet` dimension in `reputation.ts`.
 
 **External disposition (decided, #84).** A `profile.externalStylesheet` that resolves to an author is scored as an **AuthorStylesheet** (credit the author). An **authorless** external `.css/.scss` earns the _user_ the customization reward but **nothing to the site** — it's a **prune/investigate** candidate, or, if multiple users share it, a hidden **Community stylesheet**, both handled at the **permission / link-health layer**, not scored here.
 
@@ -119,7 +129,7 @@ The `/private/`, invite-only model is the primary control: a sock-puppeteer must
 First testable slices (much of the substrate already exists):
 
 1. ✅ **Stylesheet selection → CRS accrual** — pure `scoreStylesheetSelection` (no DB), table-driven over each multiplier. **Shipped: [#84](https://github.com/orphic-inc/stellar-api/pull/84)** (tier-0 multipliers; external/self decisions applied).
-2. **Tiering escalation** — the curve that compounds the base multipliers as a user climbs tiers (the `/verbiagating`-style ladder). Next slice; curve TBD.
+2. ✅ **Tiering escalation** — the back-loaded marginal curve that compounds the base author reward as a member accrues distinct adoptions. **Shipped: [#121](https://github.com/orphic-inc/stellar-api/issues/121)** (`scoreStylesheetTier`; table + cap-6 calibration in the Tiering decision above).
 3. **Dead-external penalty** — link-health-driven negative CRS for a dead `externalStylesheet`; red-green once the penalty magnitude is set.
 4. **AuthorStylesheet save → adopt → score** (the keystone — wires shipped `scoreStylesheetSelection` #84 to a real event). Three slices:
 
@@ -136,7 +146,7 @@ First testable slices (much of the substrate already exists):
 ## Open questions
 
 - AuthorStylesheetUrl storage shape (URL vs stored file) — pending ExternalStylesheet + global-reset findings.
-- **Tiering curve** + **dead-external penalty magnitude** — values TBD.
+- **Dead-external penalty magnitude** — value TBD (#122).
 - IRC scoring belongs to PRD-02 — confirm it's not duplicated here.
 
-**Resolved:** external disposition (authorless → permission/link-health, not site) · self-use pays no author bonus · per-author cap not needed for the stylesheet-dimension author bonus (the `/private` invite+report model covers it) · **accrual model = computed-on-read, with adoption events logged to a `CRS_*` ledger** ([ADR-0007](../adr/0007-crs-read-time-and-event-ledger.md)) · **Friends×Stylesheet controlled vector** (adopter +0.2 / author +0.1, once-per-pair + per-user cap).
+**Resolved:** external disposition (authorless → permission/link-health, not site) · self-use pays no author bonus · per-author cap not needed for the stylesheet-dimension author bonus (the `/private` invite+report model covers it) · **accrual model = computed-on-read, with adoption events logged to a `CRS_*` ledger** ([ADR-0007](../adr/0007-crs-read-time-and-event-ledger.md)) · **Friends×Stylesheet controlled vector** (adopter +0.2 / author +0.1, once-per-pair + per-user cap) · **tiering curve** (#121: back-loaded marginal table over distinct adoptions, cap 6 — table above).

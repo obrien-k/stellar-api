@@ -230,16 +230,25 @@ describe('computeCrs — Stylesheet dimension', () => {
       stylesheetAdoptions
     }).dimensions.find((d) => d.name === 'stylesheet')!.subScore;
 
+  const b = 0.1415926535 * 5; // SITE_BASE x5 — base author delta of the curve
+
   it('an author with no adoptions scores 0', () => {
     expect(styleOf(0)).toBeCloseTo(0, 10);
   });
 
-  it('rises with each distinct adoption', () => {
+  it('rises with each distinct adoption (back-loaded marginal curve, #121)', () => {
     expect(styleOf(3)).toBeGreaterThan(styleOf(1));
     expect(styleOf(1)).toBeGreaterThan(0);
   });
 
-  it('is bounded: mass adoption cannot dominate (STYLESHEET_CAP = 6)', () => {
+  it('tracks the tiering curve below the cap (15 adoptions ≈ 5.45)', () => {
+    expect(styleOf(15)).toBeCloseTo((3 * 0.3 + 5 * 0.45 + 7 * 0.65) * b, 10);
+  });
+
+  it('clamps to STYLESHEET_CAP = 6 once the curve runs past it', () => {
+    // Raw curve at 16 ≈ 6.05 and keeps climbing; the dimension cap holds it at 6.
+    expect(styleOf(16)).toBeCloseTo(6, 10);
+    expect(styleOf(30)).toBeCloseTo(6, 10);
     expect(styleOf(1000)).toBeLessThanOrEqual(6);
   });
 });

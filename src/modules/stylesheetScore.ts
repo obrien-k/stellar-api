@@ -78,3 +78,46 @@ export const scoreStylesheetSelection = (
     }
   }
 };
+
+// ─── Tiering escalation curve (PRD-03 target #2, #121) ───────────────────────
+// An author's stylesheet-dimension CRS as a function of how many distinct
+// members have adopted their sheets. Replaces the old flat per-adoption reward
+// with a back-loaded marginal schedule: early adoptions score BELOW the base
+// rate, the marginal rate climbs each band, and the dimension cap (held in
+// reputation.ts) is reached only by sustained popularity (~16 adoptions). We
+// shape the climb, not the ceiling — a celebrated theme author should have to
+// earn the cap, but a cosmetic signal must not dominate global CRS.
+//
+// Marginal (tax-bracket), not a whole-count multiplier, so the score is
+// monotonic and cliff-free: it's read-time over the live adoption count
+// (ADR-0007), so when a sheet loses adoptions the score eases down instead of
+// re-rating every past adoption across a tier boundary. Rates are fractions of
+// the base author delta `TIER_BASE`, so retuning the base rescales the curve.
+const TIER_BASE = scoreStylesheetSelection({
+  userId: 0,
+  origin: { kind: 'author', authorId: 1 }
+}).author!.delta;
+
+// Each band scores adoptions up to (and including) `upTo` at `rate × TIER_BASE`;
+// `upTo: null` is the open-ended top band. Cumulative band-end CRS: 0.64 / 2.23
+// / 5.45 — the cap (6, in reputation.ts) lands at ~adoption 16 inside band 4.
+const TIER_BANDS: ReadonlyArray<{ upTo: number | null; rate: number }> = [
+  { upTo: 3, rate: 0.3 },
+  { upTo: 8, rate: 0.45 },
+  { upTo: 15, rate: 0.65 },
+  { upTo: null, rate: 0.85 }
+];
+
+export const scoreStylesheetTier = (adoptions: number): number => {
+  const n = Math.max(0, Math.floor(adoptions));
+  let scored = 0; // adoptions already credited in lower bands
+  let total = 0;
+  for (const band of TIER_BANDS) {
+    if (scored >= n) break;
+    const bandTop = band.upTo ?? n;
+    const inBand = Math.min(n, bandTop) - scored;
+    total += inBand * band.rate * TIER_BASE;
+    scored += inBand;
+  }
+  return total;
+};
