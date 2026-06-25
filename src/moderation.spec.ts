@@ -320,6 +320,94 @@ describe('PUT /api/users/:id/rank', () => {
   });
 });
 
+describe('PUT /api/users/:id/rank-lock', () => {
+  beforeEach(() => setStaff());
+
+  it('locks a user and records an audit entry', async () => {
+    mockTargetUser();
+    prismaMock.user.update.mockResolvedValue(
+      makeUser({ id: 9, rankLocked: true }) as never
+    );
+    prismaMock.auditLog.create.mockResolvedValue({} as never);
+
+    const res = await request(app)
+      .put('/api/users/9/rank-lock')
+      .send({ rankLocked: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.msg).toBe('Rank locked');
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 9 },
+      data: { rankLocked: true }
+    });
+    expect(prismaMock.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'user.rank_lock_changed',
+          targetType: 'User',
+          targetId: 9,
+          metadata: { rankLocked: true }
+        })
+      })
+    );
+  });
+
+  it('unlocks a user', async () => {
+    mockTargetUser();
+    prismaMock.user.update.mockResolvedValue(makeUser({ id: 9 }) as never);
+
+    const res = await request(app)
+      .put('/api/users/9/rank-lock')
+      .send({ rankLocked: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.msg).toBe('Rank unlocked');
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 9 },
+      data: { rankLocked: false }
+    });
+  });
+
+  it('does not touch the secondary-rank set (avoids the setUserRank wipe)', async () => {
+    mockTargetUser();
+    prismaMock.user.update.mockResolvedValue(makeUser({ id: 9 }) as never);
+
+    await request(app).put('/api/users/9/rank-lock').send({ rankLocked: true });
+
+    // setUserRank clears+rebuilds userSecondaryRank on every call; the lock
+    // toggle must never go through that path or it would strip Donor/VIP.
+    expect(prismaMock.userSecondaryRank.deleteMany).not.toHaveBeenCalled();
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 9 },
+      data: { rankLocked: true }
+    });
+  });
+
+  it('returns 403 without users_edit permission', async () => {
+    setCurrentUserPermissions(
+      makeUserRank().permissions as Record<string, boolean>
+    );
+    const res = await request(app)
+      .put('/api/users/9/rank-lock')
+      .send({ rankLocked: true });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 when the target user does not exist', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    const res = await request(app)
+      .put('/api/users/9/rank-lock')
+      .send({ rankLocked: true });
+    expect(res.status).toBe(404);
+    expect(res.body.msg).toBe('User not found');
+  });
+
+  it('returns 400 when rankLocked is missing or not a boolean', async () => {
+    const res = await request(app).put('/api/users/9/rank-lock').send({});
+    expect(res.status).toBe(400);
+  });
+});
+
 // ─── IP history ───────────────────────────────────────────────────────────────
 
 describe('GET /api/users/:id/ip-history', () => {

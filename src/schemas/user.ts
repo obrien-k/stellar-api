@@ -37,6 +37,10 @@ export const setRankSchema = z.object({
   secondaryRankIds: z.array(z.number().int().positive()).default([])
 });
 
+export const rankLockSchema = z.object({
+  rankLocked: z.boolean()
+});
+
 export const donorRankSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   minDonation: z.number().positive(),
@@ -86,6 +90,7 @@ export type UserSettingsInput = z.infer<typeof userSettingsSchema>;
 export type WarnUserInput = z.infer<typeof warnUserSchema>;
 export type ModerationNoteInput = z.infer<typeof moderationNoteSchema>;
 export type SetRankInput = z.infer<typeof setRankSchema>;
+export type RankLockInput = z.infer<typeof rankLockSchema>;
 export type DonorRankInput = z.infer<typeof donorRankSchema>;
 export type GrantDonorInput = z.infer<typeof grantDonorSchema>;
 export type IrcNickVerifyInput = z.infer<typeof ircNickVerifySchema>;
