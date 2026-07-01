@@ -44,8 +44,16 @@ The generic `Contribution` model — the type-agnostic unit of shared content (a
 _Avoid_: contribution table, base contribution, release row
 
 **Release File**:
-The per-file rip-metadata satellite (`ReleaseFile`, 1:1 with a music Contribution): `bitrate`, `hasLog`, `hasCue`, `isScene` — the fingerprint the quality grade reads. Per-file, so distinct from the per-pressing `Edition`. The music analog of the satellite each future Contribution type attaches.
+The per-file rip-metadata satellite (`ReleaseFile`, 1:1 with a music Contribution): `bitrate`, `hasLog`, `hasCue`, `isScene` — the fingerprint the quality grade reads. Per-file, so distinct from the per-pressing `Edition`. The music analog of the satellite each future Contribution type attaches. Since #129 it is also client-surfaced — nested on the release-scoped contributions read (`GET /communities/:id/releases/:id/contributions`) that feeds the UI edition stack — not only read by the grade.
 _Avoid_: contribution metadata, file info, rip record
+
+**ReleaseGroup**:
+The community-agnostic _identity_ of a work — what makes "the same album" the same
+regardless of which Community catalogues it. It groups the community-scoped Releases
+that are that work; it holds identity only, never their Editions, Contributions, or
+files. Collages and search resolve sameness on the ReleaseGroup, then show only the
+Releases the viewer may access — the group never widens visibility (proposed — ADR-0023).
+_Avoid_: Work (that is the composition), master, album row, group, container
 
 **Ratio Mechanism**:
 The standalone `contributed`/`consumed` download gate (required-ratio brackets + the `OK/WATCH/LEECH_DISABLED` policy). Distinct from **RatioScore**. The Ratio Mechanism never reads CRS.
